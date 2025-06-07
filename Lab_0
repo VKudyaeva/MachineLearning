@@ -1,0 +1,201 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import gaussian_kde
+
+# 1. Создание таблицы умножения с помощью numpy
+def multiplication_table(size):
+    arr = np.arange(1, size+1)
+    return arr.reshape(size, 1) * arr
+
+print("Таблица умножения 5x5:")
+print(multiplication_table(5))
+print()
+
+# 2. Создание диагональной матрицы с арифметической прогрессией
+def diagonal_arithmetic_progression(N, first, diff):
+    progression = first + diff * np.arange(N)
+    return np.diag(progression)
+
+print("Диагональная матрица с арифметической прогрессией:")
+print(diagonal_arithmetic_progression(5, 1.5, 0.5))
+print()
+
+# 3. Извлечение нечетных элементов из матрицы
+A = np.arange(1, 26).reshape(5, 5)
+odd_elements = A[A % 2 != 0].flatten()
+print("Нечетные элементы матрицы A:")
+print(odd_elements)
+print()
+
+# 4. Создание массива с единицами на границе и нулями внутри
+def border_array(rows, cols):
+    arr = np.zeros((rows, cols))
+    arr[[0, -1], :] = 1
+    arr[:, [0, -1]] = 1
+    return arr
+
+print("Массив 4x4 с единицами на границе:")
+print(border_array(4, 4))
+print()
+
+# 5. Создание шахматной и треугольной матриц
+chess_board = np.zeros((5, 5))
+chess_board[::2, ::2] = 5
+chess_board[1::2, 1::2] = 5
+
+triangular_matrix = np.triu(np.full((5, 5), 5)
+
+print("Шахматная матрица:")
+print(chess_board)
+print("Детерминант шахматной матрицы:", np.linalg.det(chess_board))
+print("Обратная шахматная матрица:")
+print(np.linalg.inv(chess_board))
+print()
+
+print("Треугольная матрица:")
+print(triangular_matrix)
+print("Детерминант треугольной матрицы:", np.linalg.det(triangular_matrix))
+print("Обратная треугольная матрица:")
+print(np.linalg.inv(triangular_matrix))
+print()
+
+# 6-15. Работа с pandas и датасетом квартир
+# Загрузка датасета (предполагается, что файл называется 'flats.csv')
+try:
+    df = pd.read_csv('flats.csv')
+except FileNotFoundError:
+    print("Файл 'flats.csv' не найден. Создаем демо-датасет.")
+    data = {
+        'id': range(1, 101),
+        'price': np.random.randint(1_000_000, 10_000_000, 100),
+        'rooms': np.random.randint(1, 5, 100),
+        'square': np.random.uniform(30, 120, 100).round(1),
+        'house_floor': np.random.randint(1, 25, 100),
+        'house_year': np.random.randint(1960, 2023, 100),
+        'district': np.random.choice(['Северный', 'Южный', 'Западный', 'Восточный'], 100)
+    }
+    df = pd.DataFrame(data)
+
+# Основные операции с датасетом
+print("Первые 5 строк датасета:")
+print(df.head())
+print("\nПоследние 5 строк датасета:")
+print(df.tail())
+
+print("\nИнформация о датасете:")
+print(df.info())
+
+print("\nОсновные статистики:")
+print(df.describe())
+
+# Удаление столбцов с идентификаторами и переименование
+df = df.drop(columns=['id'], errors='ignore')
+df.columns = ['Цена', 'Комнаты', 'Площадь', 'Этаж_дома', 'Год_дома', 'Район']
+
+# Вывод столбца с ценой
+print("\nСтолбец 'Цена':")
+print(df['Цена'])
+print(df.iloc[:, 0])
+
+# Вывод строк по номерам
+print("\nПервая строка:")
+print(df.iloc[0])
+print("\nДесятая строка:")
+print(df.iloc[9])
+print("\nПредпоследняя строка:")
+print(df.iloc[-2])
+
+# Работа с последними 10 строками
+last_10 = df.tail(10).copy()
+last_10_without_price = last_10.drop(columns=['Цена'])
+mean_price = df['Цена'].mean()
+df = df.append(last_10_without_price, ignore_index=True)
+df['Цена'].fillna(mean_price, inplace=True)
+
+# Работа с последними 5 колонками
+last_5_cols = df.iloc[:, -5:].copy()
+last_5_cols = last_5_cols[last_5_cols['Цена'] >= mean_price]
+df = pd.concat([df, last_5_cols], axis=0)
+
+# Группировка по этажам
+floor_stats = df.groupby('Этаж_дома').agg({'Цена': 'mean', 'Комнаты': 'count'})
+floor_stats.columns = ['Средняя_цена', 'Количество_квартир']
+print("\nСтатистика по этажам:")
+print(floor_stats)
+
+# Сохранение и чтение файлов
+df.to_csv('processed_flats.csv', index=False)
+df.to_excel('processed_flats.xlsx', index=False)
+
+print("\nЧтение CSV файла:")
+print(pd.read_csv('processed_flats.csv').head())
+print("\nЧтение Excel файла:")
+print(pd.read_excel('processed_flats.xlsx').head())
+
+# 16-23. Визуализация данных
+plt.figure(figsize=(15, 15))
+
+# Круговая диаграмма для комнат
+plt.subplot(3, 3, 1)
+rooms_counts = df['Комнаты'].value_counts()
+explode = [0.1 if i == rooms_counts.idxmax() else 0 for i in rooms_counts.index]
+rooms_counts.plot.pie(autopct='%1.1f%%', explode=explode)
+plt.title('Распределение квартир по количеству комнат')
+plt.ylabel('')
+
+# Гистограмма цен
+plt.subplot(3, 3, 2)
+plt.hist(df['Цена'], bins=20, color='skyblue', edgecolor='black')
+plt.title('Распределение цен на квартиры')
+plt.xlabel('Цена')
+plt.ylabel('Количество квартир')
+
+# Диаграммы рассеяния
+features = ['Комнаты', 'Площадь', 'Этаж_дома', 'Год_дома']
+for i, feature in enumerate(features, 3):
+    plt.subplot(3, 3, i)
+    plt.scatter(df[feature], df['Цена'], alpha=0.5)
+    plt.title(f'Цена vs {feature}')
+    plt.xlabel(feature)
+    plt.ylabel('Цена')
+
+# Ядерная оценка плотности для цены
+plt.subplot(3, 3, 7)
+sns.kdeplot(df['Цена'], shade=True)
+plt.title('Ядерная оценка плотности цен')
+plt.xlabel('Цена')
+plt.ylabel('Плотность')
+
+# Двумерная ядерная оценка плотности
+plt.subplot(3, 3, 8)
+sns.kdeplot(data=df, x='Этаж_дома', y='Цена', cmap="Blues", shade=True)
+plt.title('Ядерная плотность: Цена и Этаж дома')
+plt.xlabel('Этаж дома')
+plt.ylabel('Цена')
+
+# Ящиковая диаграмма для площади
+plt.subplot(3, 3, 9)
+sns.boxplot(x=df['Площадь'])
+plt.title('Распределение площади квартир')
+plt.xlabel('Площадь')
+
+plt.tight_layout()
+plt.show()
+
+# PairGrid
+numeric_cols = ['Комнаты', 'Площадь', 'Этаж_дома', 'Год_дома', 'Цена']
+g = sns.PairGrid(df[numeric_cols])
+g.map_upper(sns.scatterplot, alpha=0.5)
+g.map_lower(sns.kdeplot, cmap="Blues_d")
+g.map_diag(plt.hist)
+g.fig.suptitle('Попарные отношения признаков', y=1.02)
+plt.show()
+
+# Тепловая карта корреляции
+plt.figure(figsize=(8, 6))
+corr = df[numeric_cols].corr()
+sns.heatmap(corr, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+plt.title('Тепловая карта корреляции признаков')
+plt.show()
